@@ -1,0 +1,70 @@
+{
+  "name": "booktalk-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.4",
+    "@ffmpeg/ffmpeg": "^0.12.7",
+    "@ffmpeg/util": "^0.12.2",
+    "@heroicons/react": "^2.2.0",
+    "@stripe/stripe-js": "^2.1.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.4.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase": "^10.1.0",
+    "framer-motion": "^10.18.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.263.1",
+    "mongoose": "^7.8.6",
+    "prop-types": "^15.8.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.5.0",
+    "react-scripts": "5.0.1",
+    "react-select": "^5.10.1",
+    "react-tag-input": "^6.10.6",
+    "react-webcam": "^7.2.0",
+    "stripe": "^12.18.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "set HOST=10.0.1.49 && react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "server": "node server/index.js",
+    "dev": "concurrently \"npm run server\" \"npm start\""
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@tailwindcss/line-clamp": "^0.4.4",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.3"
+  }
+}
