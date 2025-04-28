@@ -32,7 +32,9 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'http://172.18.117.27:3001',
-  'http://[::1]:3001'
+  'http://[::1]:3001',
+  'https://ourbooktalk.com',
+  'https://www.ourbooktalk.com'
 ];
 
 app.use(cors({
@@ -91,8 +93,13 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Routes
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // Test route
 app.get('/', (req, res) => {
