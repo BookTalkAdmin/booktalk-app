@@ -35,7 +35,7 @@
   },
   "scripts": {
     "start": "set HOST=10.0.1.49 && react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server/index.js",

@@ -10,7 +10,7 @@ import UploadModal from './components/UploadModal';
 import TBRList from './components/TBRList';
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { Search, Bell, Upload, BookmarkPlus, Book, User } from 'lucide-react';
+import { Search, Bell, Upload, Book, User } from 'lucide-react';
 import VideoCard from './components/VideoCard';
 import Cart from './components/Cart';
 import { AuthProvider, useAuth } from './contexts/AuthContext';

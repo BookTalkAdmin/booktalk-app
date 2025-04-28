@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, ChevronDown, Star, Loader2 } from 'lucide-react';
+import { ExternalLink, Star } from 'lucide-react';
 import { genres, getTopBooksByGenre, getNewReleases, getBestsellers } from '../services/bookService';
 import { motion } from 'framer-motion';
 
@@ -85,7 +85,6 @@ const BookStore = () => {
                 <span className="text-sm font-medium text-[#6B4D3C]">
                   {selectedGenre === 'all' ? 'All Genres' : genres[selectedGenre].name}
                 </span>
-                <ChevronDown size={16} className="text-[#8B7B74]" />
               </button>
 
               {showGenreDropdown && (
