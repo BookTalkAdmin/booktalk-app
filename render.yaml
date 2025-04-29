@@ -2,11 +2,14 @@ services:
   - type: web
     name: booktalk-api
     env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: JWT_SECRET
         generateValue: true
       - key: PORT
         value: 5001
+      - key: NODE_ENV
+        value: production
     healthCheckPath: /health
