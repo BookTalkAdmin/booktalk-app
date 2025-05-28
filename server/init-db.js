@@ -46,9 +46,54 @@ const sampleData = {
   ]
 };
 
+require('dotenv').config();
+
 async function initializeDatabase() {
   try {
     // Connect to MongoDB
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/booktalk';
+    console.log('Connecting to MongoDB at:', MONGODB_URI);
+    
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4
+    });
+    
+    console.log('Connected to MongoDB successfully');
+
+    // Clear existing data
+    await Promise.all([
+      User.deleteMany({}),
+      Book.deleteMany({}),
+      Video.deleteMany({})
+    ]);
+    console.log('Cleared existing data');
+
+    // Create sample users with bcrypt hashed passwords
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash('password123', 10);
+    sampleData.users[0].password = hashedPassword;
+
+    // Insert sample data
+    const createdUsers = await User.create(sampleData.users);
+    const createdBooks = await Book.create(sampleData.books);
+    const createdVideos = await Video.create(sampleData.videos.map(video => ({
+      ...video,
+      creator: createdUsers[0]._id
+    })));
+
+    console.log('Sample data inserted successfully');
+    console.log('Test user credentials:');
+    console.log('Email: bookworm@example.com');
+    console.log('Password: password123');
+
+    await mongoose.disconnect();
+    console.log('Database initialization complete');
+    process.exit(0);
+  
     await mongoose.connect('mongodb://localhost:27017/booktalk', {
       useNewUrlParser: true,
       useUnifiedTopology: true,

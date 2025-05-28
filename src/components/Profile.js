@@ -1,38 +1,64 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit, Settings, LogOut, Bookmark, Video, Plus, ExternalLink } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import EditProfileModal from './EditProfileModal';
 import SettingsModal from './SettingsModal';
 import BookSynopsis from '../components/BookSynopsis';
 
 const Profile = () => {
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('bookmarks');
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const navigate = useNavigate();
 
-  const [user, setUser] = useState({
-    name: 'Sarah Johnson',
-    username: '@bookworm_sarah',
-    bio: 'Fantasy and sci-fi enthusiast | BookTalk creator | Always reading something new',
-    email: 'sarah.johnson@example.com',
-    phone: '+1 (555) 123-4567',
-    profilePicture: null,
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: `${user.firstName} ${user.lastName}` || 'Your Name',
+        username: user.username || '@username',
+        bio: user.bio || 'Tell us about yourself...',
+        email: user.email || '',
+        phone: user.phone || '',
+        profilePicture: user.profilePicture || null,
+        stats: {
+          followers: user.stats?.followers || 0,
+          following: user.stats?.following || 0,
+          videos: user.stats?.videos || 0
+        }
+      });
+    }
+  }, [user]);
+
+  const [profileData, setProfileData] = useState({
+    name: user?.name || 'Your Name',
+    username: user?.username || '@username',
+    bio: user?.bio || 'Tell us about yourself...',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    profilePicture: user?.profilePicture || null,
     stats: {
-      followers: 1234,
-      following: 567,
-      videos: 45
+      followers: user?.stats?.followers || 0,
+      following: user?.stats?.following || 0,
+      videos: user?.stats?.videos || 0
     }
   });
 
-  const handleSaveProfile = (updatedProfile) => {
-    setUser(prev => ({
-      ...prev,
-      username: updatedProfile.username,
-      bio: updatedProfile.bio,
-      profilePicture: updatedProfile.profilePicture
-    }));
+  const handleSaveProfile = async (updatedProfile) => {
+    try {
+      await updateUser(updatedProfile);
+      setProfileData(prev => ({
+        ...prev,
+        name: updatedProfile.name,
+        username: updatedProfile.username,
+        bio: updatedProfile.bio,
+        profilePicture: updatedProfile.profilePicture
+      }));
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+    }
   };
 
   const bookmarks = [
@@ -109,6 +135,17 @@ const Profile = () => {
 
   return (
     <>
+      <EditProfileModal
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        onSave={handleSaveProfile}
+        initialData={{
+          name: profileData.name,
+          username: profileData.username,
+          bio: profileData.bio,
+          profilePicture: profileData.profilePicture
+        }}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
         <div className="bg-white rounded-xl shadow-sm border border-[#D4C5BE] p-6 mb-6">
@@ -116,20 +153,20 @@ const Profile = () => {
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-3">
                 <div className="relative w-20 h-20 bg-[#D4C5BE] rounded-full overflow-hidden">
-                  {user.profilePicture ? (
+                  {profileData.profilePicture ? (
                     <img
-                      src={typeof user.profilePicture === 'string' ? user.profilePicture : URL.createObjectURL(user.profilePicture)}
-                      alt={user.name}
+                      src={typeof profileData.profilePicture === 'string' ? profileData.profilePicture : URL.createObjectURL(profileData.profilePicture)}
+                      alt={profileData.name}
                       className="w-full h-full object-cover"
                     />
                   ) : null}
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-[#5D4037]">{user.name}</h1>
-                  <p className="text-[#8B7B74]">{user.username}</p>
+                  <h1 className="text-xl font-semibold text-[#5D4037]">{profileData.name}</h1>
+                  <p className="text-[#8B7B74]">{profileData.username}</p>
                 </div>
               </div>
-              <p className="text-[#6B4D3C] max-w-lg">{user.bio}</p>
+              <p className="text-[#6B4D3C] max-w-lg">{profileData.bio}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -157,15 +194,15 @@ const Profile = () => {
           </div>
           <div className="flex items-center gap-6 mt-6 max-w-4xl mx-auto">
             <div>
-              <span className="block font-medium text-[#5D4037]">{user.stats.followers}</span>
+              <span className="block font-medium text-[#5D4037]">{profileData.stats.followers}</span>
               <span className="text-sm text-[#8B7B74]">Followers</span>
             </div>
             <div>
-              <span className="block font-medium text-[#5D4037]">{user.stats.following}</span>
+              <span className="block font-medium text-[#5D4037]">{profileData.stats.following}</span>
               <span className="text-sm text-[#8B7B74]">Following</span>
             </div>
             <div>
-              <span className="block font-medium text-[#5D4037]">{user.stats.videos}</span>
+              <span className="block font-medium text-[#5D4037]">{profileData.stats.videos}</span>
               <span className="text-sm text-[#8B7B74]">Videos</span>
             </div>
           </div>

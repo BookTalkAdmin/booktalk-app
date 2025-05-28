@@ -18,13 +18,25 @@ export const AuthProvider = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found in localStorage');
+        setLoading(false);
+        return;
+      }
+
       try {
+        console.log('Attempting to restore session with token');
         const userData = await auth.getCurrentUser();
         if (userData) {
+          console.log('Session restored successfully');
           setUser(userData);
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
+        // Clear invalid token
+        localStorage.removeItem('token');
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -32,6 +44,17 @@ export const AuthProvider = ({ children }) => {
 
     initAuth();
   }, []);
+
+  const updateUser = async (userData) => {
+    try {
+      const response = await api.patch(`/users/${user._id}`, userData);
+      setUser(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to update user:', err);
+      throw err;
+    }
+  };
 
   const login = async (email, password) => {
     try {
@@ -55,10 +78,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async ({ username, email, password, firstName, lastName }) => {
     try {
       console.log('AuthContext: Attempting registration...');
-      const { token } = await auth.register(username, email, password);
+      const response = await api.post('/auth/register', { username, email, password, firstName, lastName });
+      const { token } = response.data;
       console.log('AuthContext: Registration successful, got token');
       localStorage.setItem('token', token);
       const userData = await auth.getCurrentUser();
@@ -90,12 +114,15 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     loading
   };
-
   if (loading) {
     return <div>Loading...</div>; // Or your loading component
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

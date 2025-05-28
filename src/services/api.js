@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001';
+const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://booktalk-backend.onrender.com' : 'http://127.0.0.1:5001');
 
 console.log('API URL:', API_URL);
 
@@ -9,7 +9,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
   timeout: 10000, // 10 second timeout
   validateStatus: status => status >= 200 && status < 300
 });
@@ -47,6 +46,15 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle token expiration
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      // Only show session expired for token-related errors
+      if (error.response?.data?.message?.toLowerCase().includes('token')) {
+        error.displayMessage = 'Session expired. Please log in again.';
+      }
+    }
+
     console.error('API Error:', {
       url: error.config?.url,
       status: error.response?.status,
@@ -129,18 +137,28 @@ export const auth = {
   async register(username, email, password) {
     try {
       console.log('API Service: Attempting registration...');
+      console.log('API Service: Using URL:', API_URL + '/auth/register');
       const response = await api.post('/auth/register', {
         username,
         email,
         password,
       });
+      console.log('API Service: Registration response:', response);
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
+        console.log('API Service: Token stored successfully');
+      } else {
+        console.warn('API Service: No token received in response');
       }
       console.log('API Service: Registration successful');
       return response.data;
     } catch (error) {
-      console.error('API Service: Registration failed:', error);
+      console.error('API Service: Registration failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       throw error;
     }
   },

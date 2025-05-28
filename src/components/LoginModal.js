@@ -7,6 +7,8 @@ const LoginModal = ({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,9 +21,17 @@ const LoginModal = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
+      // Clear any existing token before login/register
+      localStorage.removeItem('token');
+
       if (isLogin) {
-        console.log('Attempting login with:', { email, password });
-        await login(email, password);
+        try {
+          await login(email, password);
+          onClose();
+        } catch (error) {
+          console.error('Login error:', error);
+          setError(error.displayMessage || error.response?.data?.message || error.message || 'Failed to log in');
+        }
       } else {
         if (password !== confirmPassword) {
           setError('Passwords do not match');
@@ -29,12 +39,27 @@ const LoginModal = ({ isOpen, onClose }) => {
           return;
         }
         console.log('Attempting registration with:', { username, email, password });
-        await register(username, email, password);
+        await register({ username, email, password, firstName, lastName });
       }
       onClose();
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err.response?.data?.message || err.message || 'An error occurred');
+      if (err.response) {
+        console.error('Response error:', err.response);
+        const errorMessage = err.response.data?.message || err.response.statusText || 'Server error: ' + err.response.status;
+        if (err.response.status === 401 || errorMessage.toLowerCase().includes('session')) {
+          setError('Session expired. Please try again.');
+          localStorage.removeItem('token');
+        } else {
+          setError(errorMessage);
+        }
+      } else if (err.request) {
+        console.error('Request error:', err.request);
+        setError('Network error: Unable to reach the server. Please check your connection.');
+      } else {
+        console.error('Other error:', err.message);
+        setError(err.message || 'An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }
@@ -79,22 +104,58 @@ const LoginModal = ({ isOpen, onClose }) => {
             )}
 
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-[#6B4D3C] mb-1">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7B74]" />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#D4C5BE] focus:outline-none focus:border-[#6B4D3C]"
-                    placeholder="johndoe"
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B4D3C] mb-1">
+                      First Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7B74]" />
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#D4C5BE] focus:outline-none focus:border-[#6B4D3C]"
+                        placeholder="John"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B4D3C] mb-1">
+                      Last Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7B74]" />
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#D4C5BE] focus:outline-none focus:border-[#6B4D3C]"
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#6B4D3C] mb-1">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7B74]" />
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#D4C5BE] focus:outline-none focus:border-[#6B4D3C]"
+                      placeholder="johndoe"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div>

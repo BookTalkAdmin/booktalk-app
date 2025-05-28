@@ -27,47 +27,82 @@ const auth = async (req, res, next) => {
 router.post('/register', async (req, res) => {
   try {
     console.log('Register request received:', req.body);
-    const { username, email, password } = req.body;
+    const { username, email, password, firstName, lastName } = req.body;
+
+    if (!username || !email || !password || !firstName || !lastName) {
+      return res.status(400).json({ message: 'Please provide all required fields' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
+    }
 
     // Create user
-    const user = await userService.createUser({ username, email, password });
+    const user = await userService.createUser({ username, email, password, firstName, lastName });
 
     // Create token
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '24h' }
     );
 
     console.log('Registration successful for:', email);
-    res.status(201).json({ token });
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(400).json({ message: error.message });
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email or username already exists' });
+    }
+    res.status(400).json({ message: error.message || 'Registration failed' });
   }
 });
 
 // Login
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login request received:', { email: req.body.email });
+    console.log('Login request received for:', req.body.email);
     const { email, password } = req.body;
 
-    // Validate user
-    const user = await userService.validateUser(email, password);
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide both email and password' });
+    }
 
-    // Create token
+    const user = await userService.validateUser(email, password);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
     const token = jwt.sign(
-      { id: user.id },
+      { id: user._id }, 
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '24h' }
     );
 
     console.log('Login successful for:', email);
-    res.json({ token });
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(401).json({ message: error.message });
+    if (error.message.includes('Invalid email or password')) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+    res.status(400).json({ message: error.message || 'Login failed' });
   }
 });
 

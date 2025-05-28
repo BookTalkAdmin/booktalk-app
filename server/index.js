@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
 
 // Load environment variables first, before any other code
 dotenv.config();
@@ -11,6 +13,33 @@ if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is required in environment variables');
   process.exit(1);
 }
+
+// Connect to MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/booktalk';
+console.log('Connecting to MongoDB at:', MONGODB_URI);
+
+// MongoDB connection options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000, // 5 second timeout
+  socketTimeoutMS: 45000, // 45 second timeout
+  family: 4 // Use IPv4, skip trying IPv6
+};
+
+// Connect to MongoDB with retry logic
+const connectWithRetry = async () => {
+  try {
+    await mongoose.connect(MONGODB_URI, mongooseOptions);
+    console.log('Connected to MongoDB successfully');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    console.log('Retrying connection in 5 seconds...');
+    setTimeout(connectWithRetry, 5000);
+  }
+};
+
+connectWithRetry();
 
 const app = express();
 
@@ -31,10 +60,12 @@ const allowedOrigins = [
   'http://localhost:3001',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'http://172.18.117.27:3001',
-  'http://[::1]:3001',
   'https://ourbooktalk.com',
-  'https://www.ourbooktalk.com'
+  'https://www.ourbooktalk.com',
+  'https://booktalk-app.onrender.com',
+  'https://booktalk-backend.onrender.com',
+  'https://booktalk-app.windsurf.build',
+  'https://booktalk-app.netlify.app'
 ];
 
 app.use(cors({
@@ -47,7 +78,7 @@ app.use(cors({
     
     if (allowedOrigins.indexOf(origin) === -1) {
       console.log('Origin not allowed:', origin);
-      return callback(null, false);
+      return callback(new Error('Not allowed by CORS'));
     }
     console.log('Origin allowed:', origin);
     return callback(null, true);
@@ -59,6 +90,19 @@ app.use(cors({
 
 // Pre-flight requests
 app.options('*', cors());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend server is running!' });
+});
+
+// Mount auth routes
+app.use('/api/auth', authRoutes);
 
 // Body parser middleware with increased limit
 app.use(express.json({ limit: '10mb' }));
@@ -93,17 +137,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
 
 // Test route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to BookTalk API' });
+  res.send('BookTalk API is running');
 });
 
 // Start server
