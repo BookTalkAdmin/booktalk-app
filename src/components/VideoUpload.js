@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import api from '../services/api';
 import Webcam from 'react-webcam';
 import Select from 'react-select';
 import { WithContext as ReactTags } from 'react-tag-input';
