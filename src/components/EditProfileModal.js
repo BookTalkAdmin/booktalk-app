@@ -148,13 +148,6 @@ const EditProfileModal = ({ isOpen, onClose, onSave, initialData }) => {
                   <span>Upload Photo</span>
                 </label>
               </div>
-              {formData.profilePicture && (
-                <img
-                  src={formData.profilePicture}
-                  alt="Profile"
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              )}
             </div>
           </div>
 

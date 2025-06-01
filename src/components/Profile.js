@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Edit, Settings, LogOut, Bookmark, Video, Plus, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,24 +15,6 @@ const Profile = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: `${user.firstName} ${user.lastName}` || 'Your Name',
-        username: user.username || '@username',
-        bio: user.bio || 'Tell us about yourself...',
-        email: user.email || '',
-        phone: user.phone || '',
-        profilePicture: user.profilePicture || null,
-        stats: {
-          followers: user.stats?.followers || 0,
-          following: user.stats?.following || 0,
-          videos: user.stats?.videos || 0
-        }
-      });
-    }
-  }, [user]);
-
   const [profileData, setProfileData] = useState({
     name: '',
     username: '',
@@ -45,24 +28,42 @@ const Profile = () => {
     }
   });
 
+  const [bookmarks, setBookmarks] = useState([]);
+  const [uploads, setUploads] = useState([]);
+  const [drafts, setDrafts] = useState([]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (user?._id) {
         try {
-          const response = await api.get(`/users/${user._id}`);
-          const userData = response.data;
+          // Fetch user profile
+          const userResponse = await api.get(`/users/${user._id}`);
+          const userData = userResponse.data;
+          
           setProfileData({
-            name: userData.firstName + ' ' + userData.lastName,
-            username: userData.username,
-            bio: userData.bio || 'Tell us about yourself...',
-            email: userData.email,
+            name: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : '',
+            username: userData.username || '',
+            bio: userData.bio || '',
+            email: userData.email || '',
             profilePicture: userData.profilePicture,
             stats: {
-              followers: userData.stats?.followers || 0,
-              following: userData.stats?.following || 0,
+              followers: userData.followers?.length || 0,
+              following: userData.following?.length || 0,
               videos: userData.stats?.videos || 0
             }
           });
+
+          // Fetch bookmarks
+          const bookmarksResponse = await api.get(`/users/${user._id}/bookmarks`);
+          setBookmarks(bookmarksResponse.data || []);
+
+          // Fetch uploads
+          const uploadsResponse = await api.get(`/users/${user._id}/videos`);
+          setUploads(uploadsResponse.data || []);
+
+          // Fetch drafts
+          const draftsResponse = await api.get(`/users/${user._id}/drafts`);
+          setDrafts(draftsResponse.data || []);
         } catch (error) {
           console.error('Error fetching user data:', error);
         }
@@ -74,46 +75,39 @@ const Profile = () => {
 
   const handleSaveProfile = async (updatedProfile) => {
     try {
-      await updateUser(updatedProfile);
+      const formData = new FormData();
+      formData.append('name', updatedProfile.name);
+      formData.append('username', updatedProfile.username);
+      formData.append('bio', updatedProfile.bio);
+      
+      if (updatedProfile.profilePicture instanceof File) {
+        formData.append('profilePicture', updatedProfile.profilePicture);
+      }
+
+      const response = await api.patch(`/users/${user._id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const userData = response.data;
+      
       setProfileData(prev => ({
         ...prev,
-        name: updatedProfile.name,
-        username: updatedProfile.username,
-        bio: updatedProfile.bio,
-        profilePicture: updatedProfile.profilePicture
+        name: `${userData.firstName} ${userData.lastName}`,
+        username: userData.username,
+        bio: userData.bio,
+        profilePicture: userData.profilePicture
       }));
+
+      await updateUser(userData);
     } catch (err) {
       console.error('Failed to update profile:', err);
+      throw err;
     }
   };
 
-  const [bookmarks, setBookmarks] = useState([]);
-  const [uploads, setUploads] = useState([]);
-  const [drafts, setDrafts] = useState([]);
 
-  useEffect(() => {
-    const fetchUserContent = async () => {
-      if (user?._id) {
-        try {
-          // Fetch bookmarks
-          const bookmarksRes = await api.get(`/users/${user._id}/bookmarks`);
-          setBookmarks(bookmarksRes.data);
-
-          // Fetch uploads
-          const uploadsRes = await api.get(`/users/${user._id}/videos`);
-          setUploads(uploadsRes.data);
-
-          // Fetch drafts
-          const draftsRes = await api.get(`/users/${user._id}/drafts`);
-          setDrafts(draftsRes.data);
-        } catch (error) {
-          console.error('Error fetching user content:', error);
-        }
-      }
-    };
-
-    fetchUserContent();
-  }, [user?._id]);
 
   const handleBuyClick = (e, book) => {
     e.stopPropagation();
