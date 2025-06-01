@@ -92,7 +92,22 @@ const VideoUpload = () => {
       setIsProcessing(true);
       setError(null);
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      setMode('editing');
+      const formData = new FormData();
+      formData.append('video', blob, 'recording.webm');
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('books', JSON.stringify(selectedBooks));
+      formData.append('tags', JSON.stringify(tags));
+
+      const response = await api.post('/videos', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.status === 201) {
+        setMode('success');
+      }
     } catch (err) {
       console.error('Error processing video:', err);
       setError('Failed to process video. Please try again.');
@@ -128,7 +143,7 @@ const VideoUpload = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       // Check if it's a video file
@@ -143,9 +158,30 @@ const VideoUpload = () => {
         return;
       }
 
-      setUploadedVideo(file);
-      setError(null);
-      setMode('editing');
+      try {
+        setIsProcessing(true);
+        const formData = new FormData();
+        formData.append('video', file);
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('books', JSON.stringify(selectedBooks));
+        formData.append('tags', JSON.stringify(tags));
+
+        const response = await api.post('/videos', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        if (response.status === 201) {
+          setMode('success');
+        }
+      } catch (err) {
+        console.error('Error uploading video:', err);
+        setError('Failed to upload video. Please try again.');
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 

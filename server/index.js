@@ -96,6 +96,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Serve static files
+app.use('/uploads/videos', express.static('uploads/videos'));
+app.use('/uploads/thumbnails', express.static('uploads/thumbnails'));
+app.use('/uploads/profiles', express.static('uploads/profiles'));
+
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend server is running!' });

@@ -33,18 +33,44 @@ const Profile = () => {
   }, [user]);
 
   const [profileData, setProfileData] = useState({
-    name: user?.name || 'Your Name',
-    username: user?.username || '@username',
-    bio: user?.bio || 'Tell us about yourself...',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    profilePicture: user?.profilePicture || null,
+    name: '',
+    username: '',
+    bio: '',
+    email: '',
+    profilePicture: null,
     stats: {
-      followers: user?.stats?.followers || 0,
-      following: user?.stats?.following || 0,
-      videos: user?.stats?.videos || 0
+      followers: 0,
+      following: 0,
+      videos: 0
     }
   });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user?._id) {
+        try {
+          const response = await api.get(`/users/${user._id}`);
+          const userData = response.data;
+          setProfileData({
+            name: userData.firstName + ' ' + userData.lastName,
+            username: userData.username,
+            bio: userData.bio || 'Tell us about yourself...',
+            email: userData.email,
+            profilePicture: userData.profilePicture,
+            stats: {
+              followers: userData.stats?.followers || 0,
+              following: userData.stats?.following || 0,
+              videos: userData.stats?.videos || 0
+            }
+          });
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [user?._id]);
 
   const handleSaveProfile = async (updatedProfile) => {
     try {
@@ -61,20 +87,33 @@ const Profile = () => {
     }
   };
 
-  const bookmarks = [
-    { id: 1, title: 'Why Mistborn is a Must-Read', creator: '@fantasy_fan', thumbnail: 'https://example.com/thumb1.jpg' },
-    { id: 2, title: 'Monthly Book Haul', creator: '@booknerd', thumbnail: 'https://example.com/thumb2.jpg' }
-  ];
+  const [bookmarks, setBookmarks] = useState([]);
+  const [uploads, setUploads] = useState([]);
+  const [drafts, setDrafts] = useState([]);
 
-  const uploads = [
-    { id: 1, title: 'Book Review: Dune', views: '2.3K', thumbnail: 'https://example.com/thumb3.jpg' },
-    { id: 2, title: 'Reading Vlog: Week 23', views: '1.1K', thumbnail: 'https://example.com/thumb4.jpg' }
-  ];
+  useEffect(() => {
+    const fetchUserContent = async () => {
+      if (user?._id) {
+        try {
+          // Fetch bookmarks
+          const bookmarksRes = await api.get(`/users/${user._id}/bookmarks`);
+          setBookmarks(bookmarksRes.data);
 
-  const drafts = [
-    { id: 1, title: 'Monthly Wrap-Up', lastEdited: '2 hours ago', thumbnail: 'https://example.com/thumb5.jpg' },
-    { id: 2, title: 'Fantasy Book Recommendations', lastEdited: 'Yesterday', thumbnail: 'https://example.com/thumb6.jpg' }
-  ];
+          // Fetch uploads
+          const uploadsRes = await api.get(`/users/${user._id}/videos`);
+          setUploads(uploadsRes.data);
+
+          // Fetch drafts
+          const draftsRes = await api.get(`/users/${user._id}/drafts`);
+          setDrafts(draftsRes.data);
+        } catch (error) {
+          console.error('Error fetching user content:', error);
+        }
+      }
+    };
+
+    fetchUserContent();
+  }, [user?._id]);
 
   const handleBuyClick = (e, book) => {
     e.stopPropagation();
@@ -91,25 +130,41 @@ const Profile = () => {
       case 'bookmarks':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-            {bookmarks.map(video => (
-              <div key={video.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="aspect-video bg-gray-200 rounded-lg mb-3" />
-                <h3 className="font-medium text-gray-900 mb-1">{video.title}</h3>
-                <p className="text-sm text-gray-600">{video.creator}</p>
-              </div>
-            ))}
+            {bookmarks.length > 0 ? (
+              bookmarks.map(video => (
+                <div key={video._id} className="bg-white rounded-lg shadow-sm p-4 cursor-pointer" onClick={() => navigate(`/video/${video._id}`)}>
+                  <div className="aspect-video bg-gray-200 rounded-lg mb-3 relative overflow-hidden">
+                    {video.thumbnail && (
+                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">{video.title}</h3>
+                  <p className="text-sm text-gray-600">{video.creator?.username}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center col-span-2">No bookmarked videos yet</p>
+            )}
           </div>
         );
       case 'uploads':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-            {uploads.map(video => (
-              <div key={video.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="aspect-video bg-gray-200 rounded-lg mb-3" />
-                <h3 className="font-medium text-gray-900 mb-1">{video.title}</h3>
-                <p className="text-sm text-gray-600">{video.views} views</p>
-              </div>
-            ))}
+            {uploads.length > 0 ? (
+              uploads.map(video => (
+                <div key={video._id} className="bg-white rounded-lg shadow-sm p-4 cursor-pointer" onClick={() => navigate(`/video/${video._id}`)}>
+                  <div className="aspect-video bg-gray-200 rounded-lg mb-3 relative overflow-hidden">
+                    {video.thumbnail && (
+                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">{video.title}</h3>
+                  <p className="text-sm text-gray-600">{video.views} views</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center">No uploaded videos yet</p>
+            )}
             <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-200 p-4 flex flex-col items-center justify-center text-gray-400 hover:text-gray-500 hover:border-gray-300 transition-colors cursor-pointer">
               <Plus size={24} className="mb-2" />
               <span className="text-sm font-medium">New Upload</span>
@@ -119,13 +174,21 @@ const Profile = () => {
       case 'drafts':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-            {drafts.map(draft => (
-              <div key={draft.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="aspect-video bg-gray-200 rounded-lg mb-3" />
-                <h3 className="font-medium text-gray-900 mb-1">{draft.title}</h3>
-                <p className="text-sm text-gray-500">Last edited: {draft.lastEdited}</p>
-              </div>
-            ))}
+            {drafts.length > 0 ? (
+              drafts.map(draft => (
+                <div key={draft._id} className="bg-white rounded-lg shadow-sm p-4 cursor-pointer" onClick={() => navigate(`/edit/${draft._id}`)}>
+                  <div className="aspect-video bg-gray-200 rounded-lg mb-3 relative overflow-hidden">
+                    {draft.thumbnail && (
+                      <img src={draft.thumbnail} alt={draft.title} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">{draft.title}</h3>
+                  <p className="text-sm text-gray-500">Last edited: {new Date(draft.updatedAt).toLocaleDateString()}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center">No drafts yet</p>
+            )}
           </div>
         );
       default:

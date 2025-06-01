@@ -1,11 +1,40 @@
 const router = require('express').Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for profile picture uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/profiles';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueFilename);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  }
+});
 
 // Update user profile
-router.patch('/:id', auth, async (req, res) => {
+router.patch('/:id', auth, upload.single('profilePicture'), async (req, res) => {
   try {
-    const { name, username, bio, profilePicture } = req.body;
     const userId = req.params.id;
 
     // Check if user exists
@@ -20,10 +49,27 @@ router.patch('/:id', auth, async (req, res) => {
     }
 
     // Update user fields
-    if (name) user.name = name;
-    if (username) user.username = username;
-    if (bio) user.bio = bio;
-    if (profilePicture) user.profilePicture = profilePicture;
+    if (req.body.name) {
+      const [firstName, ...lastNameParts] = req.body.name.split(' ');
+      user.firstName = firstName;
+      user.lastName = lastNameParts.join(' ');
+    }
+    if (req.body.username) user.username = req.body.username;
+    if (req.body.bio) user.bio = req.body.bio;
+
+    // Handle profile picture upload
+    if (req.file) {
+      // Delete old profile picture if it exists
+      if (user.profilePicture) {
+        const oldPicturePath = path.join(__dirname, '..', user.profilePicture.replace(/^\//, ''));
+        if (fs.existsSync(oldPicturePath)) {
+          fs.unlinkSync(oldPicturePath);
+        }
+      }
+
+      // Set new profile picture path
+      user.profilePicture = `/${req.file.path.replace(/\\/g, '/')}`;
+    }
 
     // Save updated user
     await user.save();
@@ -36,6 +82,24 @@ router.patch('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Get user profile
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('stats');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: error.message });
   }
 });
 

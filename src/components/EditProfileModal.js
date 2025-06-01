@@ -15,13 +15,44 @@ const EditProfileModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setError('Image must be less than 5MB');
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, profilePicture: file }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const response = await api.patch(`/users/${user._id}`, formData);
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('username', formData.username);
+      formDataToSend.append('bio', formData.bio);
+      
+      if (formData.profilePicture instanceof File) {
+        formDataToSend.append('profilePicture', formData.profilePicture);
+      }
+
+      const response = await api.patch(`/users/${user._id}`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
       await updateUser(response.data);
       onSave(response.data);
       onClose();
@@ -91,14 +122,32 @@ const EditProfileModal = ({ isOpen, onClose, onSave, initialData }) => {
 
           <div>
             <label className="block text-sm font-medium text-[#6B4D3C] mb-1">Profile Picture</label>
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                className="px-4 py-2 border border-[#D4C5BE] rounded-lg flex items-center space-x-2 hover:bg-[#F5F0ED]"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Upload</span>
-              </button>
+            <div className="flex items-center space-x-4">
+              {(formData.profilePicture || initialData?.profilePicture) && (
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+                  <img
+                    src={formData.profilePicture instanceof File ? URL.createObjectURL(formData.profilePicture) : formData.profilePicture}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="profile-picture-input"
+                />
+                <label
+                  htmlFor="profile-picture-input"
+                  className="inline-flex items-center px-4 py-2 border border-[#D4C5BE] rounded-lg cursor-pointer hover:bg-[#F5F0ED]"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  <span>Upload Photo</span>
+                </label>
+              </div>
               {formData.profilePicture && (
                 <img
                   src={formData.profilePicture}
