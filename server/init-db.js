@@ -3,49 +3,6 @@ const User = require('./models/User');
 const Video = require('./models/Video');
 const Book = require('./models/Book');
 
-const sampleData = {
-  users: [
-    {
-      username: 'bookworm',
-      email: 'bookworm@example.com',
-      password: '$2b$10$YourHashedPasswordHere', // Will be hashed in production
-      profilePicture: '',
-    }
-  ],
-  books: [
-    {
-      title: 'The Silent Patient',
-      author: 'Alex Michaelides',
-      description: 'A psychological thriller about a woman who shoots her husband and then never speaks again.',
-      cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73',
-      price: 24.99,
-      genre: 'Thriller',
-      subgenre: 'Psychological Thriller',
-    },
-    {
-      title: 'The Invisible Life of Addie LaRue',
-      author: 'V.E. Schwab',
-      description: 'A woman makes a Faustian bargain to live forever but is cursed to be forgotten by everyone she meets.',
-      cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f',
-      price: 26.99,
-      genre: 'Fantasy',
-      subgenre: 'Dark Fantasy',
-    }
-  ],
-  videos: [
-    {
-      title: 'Why You Should Read The Night Circus',
-      description: 'A deep dive into the magical world of The Night Circus and why it\'s a must-read fantasy novel.',
-      genre: 'Fantasy',
-      subgenre: 'Magical Realism',
-      videoUrl: 'https://example.com/video1.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1608889825103-eb5ed706fc64',
-      tags: ['fantasy', 'book review', 'magic'],
-      views: 1200,
-    }
-  ]
-};
-
 require('dotenv').config();
 
 async function initializeDatabase() {
@@ -57,77 +14,35 @@ async function initializeDatabase() {
     await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4
+      serverSelectionTimeoutMS: 5000, // Optional: Adjust as needed
+      socketTimeoutMS: 45000,      // Optional: Adjust as needed
+      family: 4                    // Optional: Forces IPv4 if needed
     });
     
     console.log('Connected to MongoDB successfully');
 
-    // Clear existing data
+    // Clear existing data from specified collections
+    console.log('Clearing data from User, Book, and Video collections...');
     await Promise.all([
       User.deleteMany({}),
       Book.deleteMany({}),
       Video.deleteMany({})
     ]);
-    console.log('Cleared existing data');
+    console.log('Successfully cleared data from User, Book, and Video collections.');
 
-    // Create sample users with bcrypt hashed passwords
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash('password123', 10);
-    sampleData.users[0].password = hashedPassword;
-
-    // Insert sample data
-    const createdUsers = await User.create(sampleData.users);
-    const createdBooks = await Book.create(sampleData.books);
-    const createdVideos = await Video.create(sampleData.videos.map(video => ({
-      ...video,
-      creator: createdUsers[0]._id
-    })));
-
-    console.log('Sample data inserted successfully');
-    console.log('Test user credentials:');
-    console.log('Email: bookworm@example.com');
-    console.log('Password: password123');
+    // Database is now empty and ready for new user data.
 
     await mongoose.disconnect();
-    console.log('Database initialization complete');
-    process.exit(0);
-  
-    await mongoose.connect('mongodb://localhost:27017/booktalk', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('Connected to MongoDB');
-
-    // Clear existing data
-    await Promise.all([
-      User.deleteMany({}),
-      Video.deleteMany({}),
-      Book.deleteMany({}),
-    ]);
-    console.log('Cleared existing data');
-
-    // Insert sample users
-    const users = await User.create(sampleData.users);
-    console.log('Created sample users');
-
-    // Insert sample books
-    const books = await Book.create(sampleData.books);
-    console.log('Created sample books');
-
-    // Insert sample videos with creator reference
-    const videosWithCreator = sampleData.videos.map(video => ({
-      ...video,
-      creator: users[0]._id,
-    }));
-    const videos = await Video.create(videosWithCreator);
-    console.log('Created sample videos');
-
-    console.log('Database initialization complete!');
+    console.log('Disconnected from MongoDB.');
+    console.log('Database initialization complete: All specified collections are now empty.');
     process.exit(0);
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Error during database initialization:', error);
+    // Ensure disconnection even if an error occurs
+    if (mongoose.connection.readyState === 1) { // 1 means connected
+      await mongoose.disconnect();
+      console.log('Disconnected from MongoDB due to an error.');
+    }
     process.exit(1);
   }
 }
